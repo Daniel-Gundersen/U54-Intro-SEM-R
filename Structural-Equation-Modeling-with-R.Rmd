@@ -1,0 +1,855 @@
+---
+title: "Introduction to Structural Equation Modeling with R"
+author: Daniel Gundersen, PhD<br/>DanielA_Gundersen@dfci.harvard.edu<br/>Survey and Data Management Core<br/>Dana-Farber Cancer Institute
+date: "September 28, 2017"
+output:
+  slidy_presentation: 
+      keep_md: true
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(Hmisc); library(tidyverse); library(forcats)
+
+#Read Data
+data <- read.csv('GeneticCounselingExp_DATA_2017-07-27_1516.csv')
+#Setting Labels
+
+label(data$record_id)="Record ID"
+label(data$satisfaction_timestamp)="Survey Timestamp"
+label(data$sat1)="1. The information presented by my genetic counselor was informative."
+label(data$sat2)="2. The information presented by my genetic counselor was sad or depressing."
+label(data$sat3)="3. The information presented by my genetic counselor was confusing or difficult to understand."
+label(data$sat4)="4. The information presented by my genetic counselor was distressing."
+label(data$sat5)="5. The information presented by my genetic counselor was useful."
+label(data$sat6)="6. The information presented by my genetic counselor was worrisome or anxiety inducing."
+label(data$sat7)="7. My genetic counselor answered all of my questions and concerns."
+label(data$sat8)="8. My genetic counselor was concerned about my well-being."
+label(data$sat9)="9. My appointment with my genetic counselor was about the right length of time."
+label(data$sat9a)="9a. If you disagree or disagree strongly to question #9, please tell us whether your genetic counseling session was:"
+label(data$sat10)="10. After your genetic counseling session, you were mailed a packet that included a letter from your genetic counselor, your test results, and your family tree.    Do you remember getting this packet? "
+label(data$sat11)="If you received the packet, please tell us whether you agree or disagree with the following items.  11. I recall the information provided in this packet."
+label(data$sat12)="12. The letter from the genetic counselor was useful."
+label(data$sat13)="13. The genetic testing results provided in the packet were useful."
+label(data$sat14)="14. The family tree sent by the genetic counselor was useful."
+label(data$satisfaction_complete)="Complete?"
+label(data$knowledge_of_multigene_testing_timestamp)="Survey Timestamp"
+label(data$know1)="1. Knowing about inherited risk (passed down within a family) can affect choices about cancer treatments (for example, medications or surgery). "
+label(data$know2)="2. People with an inherited risk for cancer (and their at-risk relatives) are more likely to develop more than one type of cancer. "
+label(data$know3)="3. A person with inherited risk for cancer will definitely get cancer one day. "
+label(data$know4)="4. If inherited risk for cancer is found, there is nothing a person can do to change his/her cancer risk."
+label(data$know5)="5. The lifetime chance of getting cancer depends on which altered cancer gene is inherited."
+label(data$know6)="6. People with an inherited risk for cancer may get cancer at a younger age than people with average risk. "
+label(data$know7)="7. Most people who develop cancer do so because they have inherited risk for cancer. "
+label(data$know8)="8. In the future, more information could become available that could alter the meaning of genetic test results."
+label(data$know9)="9. A person with an inherited risk for cancer may be advised to start cancer screening at an earlier age than people with an average chance."
+label(data$know10)="10. People who have inherited cancer risk may be recommended to get special cancer screening or risk-reducing surgery. "
+label(data$know11)="11. Female-specific cancer risk, such as ovarian cancer, can generally be passed on from either the father or mother. "
+label(data$know12)="12. The blood relatives (for example, sister, father, or child) of a person with a mutation in a cancer risk gene might share the same gene mutation. "
+label(data$know13)="13. A person with an inherited risk for cancer may have distant relatives (for example, cousins) who also have increased cancer risk."
+label(data$know14)="14. If a genetic test does not identify inherited risk for cancer now, there is a chance that a mutation could be identified through future tests.   "
+label(data$know15)="15. All children of a person with inherited cancer risk will also have inherited cancer risk."
+label(data$know16)="16. In most cases, the sisters and brothers of a person with inherited cancer risk have a 50-50 (50%) chance of having inherited risk for cancer too.  "
+label(data$know17)="17. A Variant of Uncertain Significance (VUS), means the genetic test result is unclear at the present time but it most likely is not associated with increased cancer risk. "
+label(data$know18)="18. All of the gene mutations that could increase risk for cancer have been discovered."
+label(data$know19)="19. If a person does not have a mutation found on genetic testing (negative result), interpreting results will depend on whether someone in the family has a known gene mutation associated with cancer risk (positive result)."
+label(data$know20)="20. Some gene mutations mean a larger increase in the risk for cancer while others mean a smaller increase in the risk for cancer. "
+label(data$know21)="21. A Variant of Uncertain Significance (VUS) will not likely influence recommendations for screening or prevention. "
+label(data$know22)="22. The effects of all gene mutations on cancer risks are not known at the current time. "
+label(data$know23)="23. Genetic testing with multi-gene panel testing will find any genetic mutations that might be present in a family. "
+label(data$know24)="24. Multi-gene panel testing could find a mutation in a gene that is not clearly associated with the pattern of cancer in the family. "
+label(data$knowledge_of_multigene_testing_complete)="Complete?"
+label(data$micra_timestamp)="Survey Timestamp"
+label(data$micra1)="1. Feeling upset about my test result."
+label(data$micra2)="2. Feeling sad about my test result."
+label(data$micra3)="3. Feeling anxious or nervous about my test result."
+label(data$micra4)="4. Feeling guilty about my test result."
+label(data$micra5)="5. Feeling relieved about my test result."
+label(data$micra6)="6. Feeling happy about my test result."
+label(data$micra7)="7. Feeling a loss of control."
+label(data$micra8)="8. Having problems enjoying life because of my test result."
+label(data$micra9)="9. Worrying about my risk of getting cancer (or getting cancer again if you have ever been diagnosed with cancer)."
+label(data$micra10)="10. Being uncertain about what my test result means about my cancer risk."
+label(data$micra11)="11. Being uncertain about what my test result means for my child(ren) and/or familys cancer risk."
+label(data$micra12)="12. Having difficulty making decisions about cancer screening or prevention (e.g., having preventive surgery or getting medical tests done)."
+label(data$micra13)="13. Understanding clearly my choices for cancer prevention or early detection."
+label(data$micra14)="14. Feeling frustrated that there are no definite cancer prevention guidelines for me."
+label(data$micra15)="15. Thinking about my test results has affected my work or family life."
+label(data$micra16)="16. Feeling concerned about how my test results will affect my insurance status."
+label(data$micra17)="17. Having difficulty talking about my test results with family members."
+label(data$micra18)="18. Feeling that my family has been supportive during the genetic counseling and testing process."
+label(data$micra19)="19. Feeling satisfied with family communication about my genetic test result."
+label(data$micra20)="20. Worrying that the genetic counseling and testing process has brought about conflict within my family."
+label(data$micra21)="21. Feeling regret about getting my test results."
+label(data$micra22)="22. Worrying about the possibility of my children getting cancer."
+label(data$micra23)="23. Feeling guilty about possibly passing on the disease risk to my child(ren)."
+label(data$micra24)="24. Feeling that the genetic test result has made it HARDER to cope with my cancer."
+label(data$micra25)="25. Feeling that the genetic test result has made it EASIER to cope with my cancer."
+label(data$micra_complete)="Complete?"
+label(data$family_communication_timestamp)="Survey Timestamp"
+label(data$comm_mother)="Mother"
+label(data$comm_father)="Father"
+label(data$comm_spouse)="Spouse/Partner"
+label(data$comm_sister)="Sister(s)"
+label(data$comm_brother)="Brother (s)"
+label(data$comm_son)="Son(s)"
+label(data$comm_daughter)="Daughter(s)"
+label(data$comm_aunt)="Aunt(s)"
+label(data$comm_uncle)="Uncle(s)"
+label(data$comm_cousin)="Cousin(s)"
+label(data$comm_niece)="Niece(s)"
+label(data$comm_nephew)="Nephew(s)"
+label(data$comm_grandp)="Grandparent(s)"
+label(data$comm_other1)="Other"
+label(data$comm_other2)="Other"
+label(data$comm_other3)="Other"
+label(data$comm_other4)="Other"
+label(data$share_mother)="Mother"
+label(data$share_father)="Father"
+label(data$share_spouse)="Spouse/partner"
+label(data$share_sister)="Sister(s)"
+label(data$share_brother)="Brother(s)"
+label(data$share_son)="Son(s)"
+label(data$share_daughter)="Daughter(s)"
+label(data$share_aunt)="Aunt(s)"
+label(data$share_uncle)="Uncle(s)"
+label(data$share_cousin)="Cousin(s)"
+label(data$share_niece)="Niece(s)"
+label(data$share_nephew)="Nephew(s)"
+label(data$share_grandp)="Grandparent(s)"
+label(data$share_other1)="Other"
+label(data$share_other2)="Other"
+label(data$share_other3)="Oher"
+label(data$share_other4)="Other"
+label(data$any_mother)="Mother"
+label(data$any_father)="Father"
+label(data$any_spouse)="Spouse/Partner"
+label(data$any_sister)="Sister(s)"
+label(data$any_brother)="Brother(s)"
+label(data$any_son)="Son(s)"
+label(data$any_daughter)="Daughter(s)"
+label(data$any_aunt)="Aunt(s)"
+label(data$any_uncle)="Uncle(s)"
+label(data$any_cousin)="Cousin(s)"
+label(data$any_niece)="Niece(s)"
+label(data$any_nephew)="Nephew(s)"
+label(data$any_grandp)="Grandparent(s)"
+label(data$any_other1)="Other"
+label(data$any_other2)="Other"
+label(data$any_other3)="Other"
+label(data$any_other4)="Other"
+label(data$famcomm1___1)="How did you share this information with your family?  Please select all that apply. (choice=I gave a copy of the letter I received from the counselor)"
+label(data$famcomm1___2)="How did you share this information with your family?  Please select all that apply. (choice=I wrote a letter/email)"
+label(data$famcomm1___3)="How did you share this information with your family?  Please select all that apply. (choice=I told it personally)"
+label(data$famcomm1___4)="How did you share this information with your family?  Please select all that apply. (choice=Other)"
+label(data$famcomm1___5)="How did you share this information with your family?  Please select all that apply. (choice=I did not share with family members)"
+label(data$famcomm2)="Was it easier, the same, or harder than anticipated to share your genetic testing results with your family?"
+label(data$famcomm3___1)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=I have not told anyone outside of my family)"
+label(data$famcomm3___2)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=Friend)"
+label(data$famcomm3___3)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=Co-worker)"
+label(data$famcomm3___4)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=Leader of faith-based community)"
+label(data$famcomm3___5)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=Health care provider (such as doctor or nurse))"
+label(data$famcomm3___6)="Have you told anyone outside of your family about your genetic testing results?    Please select all that apply. (choice=Other)"
+label(data$famcomm4___1)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=I have not had time to tell my relatives)"
+label(data$famcomm4___2)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=It is difficult to contact some of my relatives)"
+label(data$famcomm4___3)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=It is emotionally difficult to share the information)"
+label(data$famcomm4___4)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=The information is complex and I do not know what to say)"
+label(data$famcomm4___5)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=I do not have a close relationship with some of my relatives)"
+label(data$famcomm4___6)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=My relatives do not want to know the information)"
+label(data$famcomm4___7)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=I plan on sharing the results in the future)"
+label(data$famcomm4___8)="Here are some reasons why someone might NOT share information about genetic testing results with family members. Please consider which options apply to you.   Please select all that apply.  (choice=Other)"
+label(data$family_communication_complete)="Complete?"
+label(data$demographics_timestamp)="Survey Timestamp"
+label(data$gender)="1. Are you"
+label(data$marstat)="2. What is your marital status?"
+label(data$educ)="3. What is your highest level of education?"
+label(data$income)="4. What was your annual household income in the past 12 months?"
+label(data$ethnicity)="5. What is your ethnic background?"
+label(data$race___1)="6. What is your racial background?    Please select all that apply. (choice=White/Caucasian)"
+label(data$race___2)="6. What is your racial background?    Please select all that apply. (choice=Black/African American)"
+label(data$race___3)="6. What is your racial background?    Please select all that apply. (choice=Native American/Alaska Native)"
+label(data$race___4)="6. What is your racial background?    Please select all that apply. (choice=Native Hawaiian/Pacific Islander)"
+label(data$race___5)="6. What is your racial background?    Please select all that apply. (choice=Asian)"
+label(data$race___6)="6. What is your racial background?    Please select all that apply. (choice=Other)"
+label(data$demographics_complete)="Complete?"
+label(data$open_questions_timestamp)="Survey Timestamp"
+label(data$open_questions_complete)="Complete?"
+#Setting Units
+
+
+#Setting Factors(will create new variable for factors)
+data$sat1.factor = factor(data$sat1,levels=c("1","2","3","4","5"))
+data$sat2.factor = factor(data$sat2,levels=c("1","2","3","4","5"))
+data$sat3.factor = factor(data$sat3,levels=c("1","2","3","4","5"))
+data$sat4.factor = factor(data$sat4,levels=c("1","2","3","4","5"))
+data$sat5.factor = factor(data$sat5,levels=c("1","2","3","4","5"))
+data$sat6.factor = factor(data$sat6,levels=c("1","2","3","4","5"))
+data$sat7.factor = factor(data$sat7,levels=c("1","2","3","4","5"))
+data$sat8.factor = factor(data$sat8,levels=c("1","2","3","4","5"))
+data$sat9.factor = factor(data$sat9,levels=c("1","2","3","4","5"))
+data$sat9a.factor = factor(data$sat9a,levels=c("1","2"))
+data$sat10.factor = factor(data$sat10,levels=c("1","0","2"))
+data$sat11.factor = factor(data$sat11,levels=c("1","2","3","4","5"))
+data$sat12.factor = factor(data$sat12,levels=c("1","2","3","4","5"))
+data$sat13.factor = factor(data$sat13,levels=c("1","2","3","4","5"))
+data$sat14.factor = factor(data$sat14,levels=c("1","2","3","4","5"))
+data$satisfaction_complete.factor = factor(data$satisfaction_complete,levels=c("0","1","2"))
+data$know1.factor = factor(data$know1,levels=c("1","2","3"))
+data$know2.factor = factor(data$know2,levels=c("1","2","3"))
+data$know3.factor = factor(data$know3,levels=c("1","2","3"))
+data$know4.factor = factor(data$know4,levels=c("1","2","3"))
+data$know5.factor = factor(data$know5,levels=c("1","2","3"))
+data$know6.factor = factor(data$know6,levels=c("1","2","3"))
+data$know7.factor = factor(data$know7,levels=c("1","2","3"))
+data$know8.factor = factor(data$know8,levels=c("1","2","3"))
+data$know9.factor = factor(data$know9,levels=c("1","2","3"))
+data$know10.factor = factor(data$know10,levels=c("1","2","3"))
+data$know11.factor = factor(data$know11,levels=c("1","2","3"))
+data$know12.factor = factor(data$know12,levels=c("1","2","3"))
+data$know13.factor = factor(data$know13,levels=c("1","2","3"))
+data$know14.factor = factor(data$know14,levels=c("1","2","3"))
+data$know15.factor = factor(data$know15,levels=c("1","2","3"))
+data$know16.factor = factor(data$know16,levels=c("1","2","3"))
+data$know17.factor = factor(data$know17,levels=c("1","2","3"))
+data$know18.factor = factor(data$know18,levels=c("1","2","3"))
+data$know19.factor = factor(data$know19,levels=c("1","2","3"))
+data$know20.factor = factor(data$know20,levels=c("1","2","3"))
+data$know21.factor = factor(data$know21,levels=c("1","2","3"))
+data$know22.factor = factor(data$know22,levels=c("1","2","3"))
+data$know23.factor = factor(data$know23,levels=c("1","2","3"))
+data$know24.factor = factor(data$know24,levels=c("1","2","3"))
+data$knowledge_of_multigene_testing_complete.factor = factor(data$knowledge_of_multigene_testing_complete,levels=c("0","1","2"))
+data$micra1.factor = factor(data$micra1,levels=c("0","1","3","5"))
+data$micra2.factor = factor(data$micra2,levels=c("0","1","3","5"))
+data$micra3.factor = factor(data$micra3,levels=c("0","1","3","5"))
+data$micra4.factor = factor(data$micra4,levels=c("0","1","3","5"))
+data$micra5.factor = factor(data$micra5,levels=c("0","1","3","5"))
+data$micra6.factor = factor(data$micra6,levels=c("0","1","3","5"))
+data$micra7.factor = factor(data$micra7,levels=c("0","1","3","5"))
+data$micra8.factor = factor(data$micra8,levels=c("0","1","3","5"))
+data$micra9.factor = factor(data$micra9,levels=c("0","1","3","5"))
+data$micra10.factor = factor(data$micra10,levels=c("0","1","3","5"))
+data$micra11.factor = factor(data$micra11,levels=c("0","1","3","5"))
+data$micra12.factor = factor(data$micra12,levels=c("0","1","3","5"))
+data$micra13.factor = factor(data$micra13,levels=c("0","1","3","5"))
+data$micra14.factor = factor(data$micra14,levels=c("0","1","3","5"))
+data$micra15.factor = factor(data$micra15,levels=c("0","1","3","5"))
+data$micra16.factor = factor(data$micra16,levels=c("0","1","3","5"))
+data$micra17.factor = factor(data$micra17,levels=c("0","1","3","5"))
+data$micra18.factor = factor(data$micra18,levels=c("0","1","3","5"))
+data$micra19.factor = factor(data$micra19,levels=c("0","1","3","5"))
+data$micra20.factor = factor(data$micra20,levels=c("0","1","3","5"))
+data$micra21.factor = factor(data$micra21,levels=c("0","1","3","5"))
+data$micra22.factor = factor(data$micra22,levels=c("0","1","3","5"))
+data$micra23.factor = factor(data$micra23,levels=c("0","1","3","5"))
+data$micra24.factor = factor(data$micra24,levels=c("0","1","3","5"))
+data$micra25.factor = factor(data$micra25,levels=c("0","1","3","5"))
+data$micra_complete.factor = factor(data$micra_complete,levels=c("0","1","2"))
+data$comm_mother.factor = factor(data$comm_mother,levels=c("1","0","2"))
+data$comm_father.factor = factor(data$comm_father,levels=c("1","0","2"))
+data$comm_spouse.factor = factor(data$comm_spouse,levels=c("1","0","2"))
+data$comm_sister.factor = factor(data$comm_sister,levels=c("1","0","2"))
+data$comm_brother.factor = factor(data$comm_brother,levels=c("1","0","2"))
+data$comm_son.factor = factor(data$comm_son,levels=c("1","0","2"))
+data$comm_daughter.factor = factor(data$comm_daughter,levels=c("1","0","2"))
+data$comm_aunt.factor = factor(data$comm_aunt,levels=c("1","0","2"))
+data$comm_uncle.factor = factor(data$comm_uncle,levels=c("1","0","2"))
+data$comm_cousin.factor = factor(data$comm_cousin,levels=c("1","0","2"))
+data$comm_niece.factor = factor(data$comm_niece,levels=c("1","0","2"))
+data$comm_nephew.factor = factor(data$comm_nephew,levels=c("1","0","2"))
+data$comm_grandp.factor = factor(data$comm_grandp,levels=c("1","0","2"))
+data$comm_other1.factor = factor(data$comm_other1,levels=c("1","0","2"))
+data$comm_other2.factor = factor(data$comm_other2,levels=c("1","0","2"))
+data$comm_other3.factor = factor(data$comm_other3,levels=c("1","0","2"))
+data$comm_other4.factor = factor(data$comm_other4,levels=c("1","0","2"))
+data$share_mother.factor = factor(data$share_mother,levels=c("1","0","3"))
+data$share_father.factor = factor(data$share_father,levels=c("1","0","3"))
+data$share_spouse.factor = factor(data$share_spouse,levels=c("1","0","3"))
+data$share_sister.factor = factor(data$share_sister,levels=c("1","0","3"))
+data$share_brother.factor = factor(data$share_brother,levels=c("1","0","3"))
+data$share_son.factor = factor(data$share_son,levels=c("1","0","3"))
+data$share_daughter.factor = factor(data$share_daughter,levels=c("1","0","3"))
+data$share_aunt.factor = factor(data$share_aunt,levels=c("1","0","3"))
+data$share_uncle.factor = factor(data$share_uncle,levels=c("1","0","3"))
+data$share_cousin.factor = factor(data$share_cousin,levels=c("1","0","3"))
+data$share_niece.factor = factor(data$share_niece,levels=c("1","0","3"))
+data$share_nephew.factor = factor(data$share_nephew,levels=c("1","0","3"))
+data$share_grandp.factor = factor(data$share_grandp,levels=c("1","0","3"))
+data$share_other1.factor = factor(data$share_other1,levels=c("1","0","3"))
+data$share_other2.factor = factor(data$share_other2,levels=c("1","0","3"))
+data$share_other3.factor = factor(data$share_other3,levels=c("1","0","3"))
+data$share_other4.factor = factor(data$share_other4,levels=c("1","0","3"))
+data$any_mother.factor = factor(data$any_mother,levels=c("1","2","3"))
+data$any_father.factor = factor(data$any_father,levels=c("1","2","3"))
+data$any_spouse.factor = factor(data$any_spouse,levels=c("1","2","3"))
+data$any_sister.factor = factor(data$any_sister,levels=c("1","2","3"))
+data$any_brother.factor = factor(data$any_brother,levels=c("1","2","3"))
+data$any_son.factor = factor(data$any_son,levels=c("1","2","3"))
+data$any_daughter.factor = factor(data$any_daughter,levels=c("1","2","3"))
+data$any_aunt.factor = factor(data$any_aunt,levels=c("1","2","3"))
+data$any_uncle.factor = factor(data$any_uncle,levels=c("1","2","3"))
+data$any_cousin.factor = factor(data$any_cousin,levels=c("1","2","3"))
+data$any_niece.factor = factor(data$any_niece,levels=c("1","2","3"))
+data$any_nephew.factor = factor(data$any_nephew,levels=c("1","2","3"))
+data$any_grandp.factor = factor(data$any_grandp,levels=c("1","2","3"))
+data$any_other1.factor = factor(data$any_other1,levels=c("1","2","3"))
+data$any_other2.factor = factor(data$any_other2,levels=c("1","2","3"))
+data$any_other3.factor = factor(data$any_other3,levels=c("1","2","3"))
+data$any_other4.factor = factor(data$any_other4,levels=c("1","2","3"))
+data$famcomm1___1.factor = factor(data$famcomm1___1,levels=c("0","1"))
+data$famcomm1___2.factor = factor(data$famcomm1___2,levels=c("0","1"))
+data$famcomm1___3.factor = factor(data$famcomm1___3,levels=c("0","1"))
+data$famcomm1___4.factor = factor(data$famcomm1___4,levels=c("0","1"))
+data$famcomm1___5.factor = factor(data$famcomm1___5,levels=c("0","1"))
+data$famcomm2.factor = factor(data$famcomm2,levels=c("1","2","3"))
+data$famcomm3___1.factor = factor(data$famcomm3___1,levels=c("0","1"))
+data$famcomm3___2.factor = factor(data$famcomm3___2,levels=c("0","1"))
+data$famcomm3___3.factor = factor(data$famcomm3___3,levels=c("0","1"))
+data$famcomm3___4.factor = factor(data$famcomm3___4,levels=c("0","1"))
+data$famcomm3___5.factor = factor(data$famcomm3___5,levels=c("0","1"))
+data$famcomm3___6.factor = factor(data$famcomm3___6,levels=c("0","1"))
+data$famcomm4___1.factor = factor(data$famcomm4___1,levels=c("0","1"))
+data$famcomm4___2.factor = factor(data$famcomm4___2,levels=c("0","1"))
+data$famcomm4___3.factor = factor(data$famcomm4___3,levels=c("0","1"))
+data$famcomm4___4.factor = factor(data$famcomm4___4,levels=c("0","1"))
+data$famcomm4___5.factor = factor(data$famcomm4___5,levels=c("0","1"))
+data$famcomm4___6.factor = factor(data$famcomm4___6,levels=c("0","1"))
+data$famcomm4___7.factor = factor(data$famcomm4___7,levels=c("0","1"))
+data$famcomm4___8.factor = factor(data$famcomm4___8,levels=c("0","1"))
+data$family_communication_complete.factor = factor(data$family_communication_complete,levels=c("0","1","2"))
+data$gender.factor = factor(data$gender,levels=c("1","2","3"))
+data$marstat.factor = factor(data$marstat,levels=c("1","2","3","4","5"))
+data$educ.factor = factor(data$educ,levels=c("1","2","3","4","5"))
+data$income.factor = factor(data$income,levels=c("1","2","3","4","5","6"))
+data$ethnicity.factor = factor(data$ethnicity,levels=c("1","2","3","4"))
+data$race___1.factor = factor(data$race___1,levels=c("0","1"))
+data$race___2.factor = factor(data$race___2,levels=c("0","1"))
+data$race___3.factor = factor(data$race___3,levels=c("0","1"))
+data$race___4.factor = factor(data$race___4,levels=c("0","1"))
+data$race___5.factor = factor(data$race___5,levels=c("0","1"))
+data$race___6.factor = factor(data$race___6,levels=c("0","1"))
+data$demographics_complete.factor = factor(data$demographics_complete,levels=c("0","1","2"))
+data$open_questions_complete.factor = factor(data$open_questions_complete,levels=c("0","1","2"))
+
+levels(data$sat1.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat2.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat3.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat4.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat5.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat6.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat7.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat8.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat9.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat9a.factor)=c("Too long","Too short")
+levels(data$sat10.factor)=c("Yes","No","I did not get the packet")
+levels(data$sat11.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat12.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat13.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$sat14.factor)=c("Disagree strongly","Disagree","Neither agree or disagree","Agree","Agree strongly")
+levels(data$satisfaction_complete.factor)=c("Incomplete","Unverified","Complete")
+levels(data$know1.factor)=c("Agree","Disagree","I dont know")
+levels(data$know2.factor)=c("Agree","Disagree","I dont know")
+levels(data$know3.factor)=c("Agree","Disagree","I dont know")
+levels(data$know4.factor)=c("Agree","Disagree","I dont know")
+levels(data$know5.factor)=c("Agree","Disagree","I dont know")
+levels(data$know6.factor)=c("Agree","Disagree","I dont know")
+levels(data$know7.factor)=c("Agree","Disagree","I dont know")
+levels(data$know8.factor)=c("Agree","Disagree","I dont know")
+levels(data$know9.factor)=c("Agree","Disagree","I dont know")
+levels(data$know10.factor)=c("Agree","Disagree","I dont know")
+levels(data$know11.factor)=c("Agree","Disagree","I dont know")
+levels(data$know12.factor)=c("Agree","Disagree","I dont know")
+levels(data$know13.factor)=c("Agree","Disagree","I dont know")
+levels(data$know14.factor)=c("Agree","Disagree","I dont know")
+levels(data$know15.factor)=c("Agree","Disagree","I dont know")
+levels(data$know16.factor)=c("Agree","Disagree","I dont know")
+levels(data$know17.factor)=c("Agree","Disagree","I dont know")
+levels(data$know18.factor)=c("Agree","Disagree","I dont know")
+levels(data$know19.factor)=c("Agree","Disagree","I dont know")
+levels(data$know20.factor)=c("Agree","Disagree","I dont know")
+levels(data$know21.factor)=c("Agree","Disagree","I dont know")
+levels(data$know22.factor)=c("Agree","Disagree","I dont know")
+levels(data$know23.factor)=c("Agree","Disagree","I dont know")
+levels(data$know24.factor)=c("Agree","Disagree","I dont know")
+levels(data$knowledge_of_multigene_testing_complete.factor)=c("Incomplete","Unverified","Complete")
+levels(data$micra1.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra2.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra3.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra4.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra5.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra6.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra7.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra8.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra9.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra10.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra11.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra12.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra13.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra14.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra15.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra16.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra17.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra18.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra19.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra20.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra21.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra22.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra23.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra24.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra25.factor)=c("Never","Rarely","Sometimes","Often")
+levels(data$micra_complete.factor)=c("Incomplete","Unverified","Complete")
+levels(data$comm_mother.factor)=c("Yes","No","Not applicable")
+levels(data$comm_father.factor)=c("Yes","No","Not applicable")
+levels(data$comm_spouse.factor)=c("Yes","No","Not applicable")
+levels(data$comm_sister.factor)=c("Yes","No","Not applicable")
+levels(data$comm_brother.factor)=c("Yes","No","Not applicable")
+levels(data$comm_son.factor)=c("Yes","No","Not applicable")
+levels(data$comm_daughter.factor)=c("Yes","No","Not applicable")
+levels(data$comm_aunt.factor)=c("Yes","No","Not applicable")
+levels(data$comm_uncle.factor)=c("Yes","No","Not applicable")
+levels(data$comm_cousin.factor)=c("Yes","No","Not applicable")
+levels(data$comm_niece.factor)=c("Yes","No","Not applicable")
+levels(data$comm_nephew.factor)=c("Yes","No","Not applicable")
+levels(data$comm_grandp.factor)=c("Yes","No","Not applicable")
+levels(data$comm_other1.factor)=c("Yes","No","Not applicable")
+levels(data$comm_other2.factor)=c("Yes","No","Not applicable")
+levels(data$comm_other3.factor)=c("Yes","No","Not applicable")
+levels(data$comm_other4.factor)=c("Yes","No","Not applicable")
+levels(data$share_mother.factor)=c("Yes","No","Not applicable")
+levels(data$share_father.factor)=c("Yes","No","Not applicable")
+levels(data$share_spouse.factor)=c("Yes","No","Not applicable")
+levels(data$share_sister.factor)=c("Yes","No","Not applicable")
+levels(data$share_brother.factor)=c("Yes","No","Not applicable")
+levels(data$share_son.factor)=c("Yes","No","Not applicable")
+levels(data$share_daughter.factor)=c("Yes","No","Not applicable")
+levels(data$share_aunt.factor)=c("Yes","No","Not applicable")
+levels(data$share_uncle.factor)=c("Yes","No","Not applicable")
+levels(data$share_cousin.factor)=c("Yes","No","Not applicable")
+levels(data$share_niece.factor)=c("Yes","No","Not applicable")
+levels(data$share_nephew.factor)=c("Yes","No","Not applicable")
+levels(data$share_grandp.factor)=c("Yes","No","Not applicable")
+levels(data$share_other1.factor)=c("Yes","No","Not applicable")
+levels(data$share_other2.factor)=c("Yes","No","Not applicable")
+levels(data$share_other3.factor)=c("Yes","No","Not applicable")
+levels(data$share_other4.factor)=c("Yes","No","Not applicable")
+levels(data$any_mother.factor)=c("All","Some","Not applicable")
+levels(data$any_father.factor)=c("All","Some","Not applicable")
+levels(data$any_spouse.factor)=c("All","Some","Not applicable")
+levels(data$any_sister.factor)=c("All","Some","Not applicable")
+levels(data$any_brother.factor)=c("All","Some","Not applicable")
+levels(data$any_son.factor)=c("All","Some","Not applicable")
+levels(data$any_daughter.factor)=c("All","Some","Not applicable")
+levels(data$any_aunt.factor)=c("All","Some","Not applicable")
+levels(data$any_uncle.factor)=c("All","Some","Not applicable")
+levels(data$any_cousin.factor)=c("All","Some","Not applicable")
+levels(data$any_niece.factor)=c("All","Some","Not applicable")
+levels(data$any_nephew.factor)=c("All","Some","Not applicable")
+levels(data$any_grandp.factor)=c("All","Some","Not applicable")
+levels(data$any_other1.factor)=c("All","Some","Not applicable")
+levels(data$any_other2.factor)=c("All","Some","Not applicable")
+levels(data$any_other3.factor)=c("All","Some","Not applicable")
+levels(data$any_other4.factor)=c("All","Some","Not applicable")
+levels(data$famcomm1___1.factor)=c("Unchecked","Checked")
+levels(data$famcomm1___2.factor)=c("Unchecked","Checked")
+levels(data$famcomm1___3.factor)=c("Unchecked","Checked")
+levels(data$famcomm1___4.factor)=c("Unchecked","Checked")
+levels(data$famcomm1___5.factor)=c("Unchecked","Checked")
+levels(data$famcomm2.factor)=c("Easier","The same","Harder")
+levels(data$famcomm3___1.factor)=c("Unchecked","Checked")
+levels(data$famcomm3___2.factor)=c("Unchecked","Checked")
+levels(data$famcomm3___3.factor)=c("Unchecked","Checked")
+levels(data$famcomm3___4.factor)=c("Unchecked","Checked")
+levels(data$famcomm3___5.factor)=c("Unchecked","Checked")
+levels(data$famcomm3___6.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___1.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___2.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___3.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___4.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___5.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___6.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___7.factor)=c("Unchecked","Checked")
+levels(data$famcomm4___8.factor)=c("Unchecked","Checked")
+levels(data$family_communication_complete.factor)=c("Incomplete","Unverified","Complete")
+levels(data$gender.factor)=c("Male","Female","Other")
+levels(data$marstat.factor)=c("Single, never married","Married/Partnered","Separated","Divorced","Widowed")
+levels(data$educ.factor)=c("Did not graduate high school","Graduated high school","Some college","Graduated college","Post-graduate degree")
+levels(data$income.factor)=c("Less than $10,000","$10,000 to $29,999","$30,000 to $49,999","$50,000 to $69,999","$70,000 to $99,999","More than $100,000")
+levels(data$ethnicity.factor)=c("Hispanic/Latino","Non-Hispanic/Latino","Ethnicity unknown","Other")
+levels(data$race___1.factor)=c("Unchecked","Checked")
+levels(data$race___2.factor)=c("Unchecked","Checked")
+levels(data$race___3.factor)=c("Unchecked","Checked")
+levels(data$race___4.factor)=c("Unchecked","Checked")
+levels(data$race___5.factor)=c("Unchecked","Checked")
+levels(data$race___6.factor)=c("Unchecked","Checked")
+levels(data$demographics_complete.factor)=c("Incomplete","Unverified","Complete")
+levels(data$open_questions_complete.factor)=c("Incomplete","Unverified","Complete")
+
+know_micra.df <- data %>% 
+      dplyr::select(
+            contains("know"), 
+            contains("micra"), 
+            gender.factor,
+            educ.factor
+            ) %>%
+      dplyr::select(
+            contains("factor"), 
+            -contains("multigene"), 
+            -micra_complete.factor
+            ) %>% 
+      mutate_at(
+            vars(know1.factor, know2.factor, know5.factor, know6.factor,
+                 know8.factor:know14.factor, know16.factor, know17.factor,
+                 know19.factor:know22.factor, know24.factor),
+            funs(ifelse(.=="Agree", "correct", "incorrect"))
+            ) %>%
+      mutate_at(
+            vars(know3.factor, know4.factor, know7.factor, know15.factor,
+                 know18.factor, know23.factor),
+            funs(ifelse(.=="Disagree", "correct", "incorrect"))
+            ) %>%
+      mutate(college = fct_collapse(educ.factor,
+                                    college_plus = c("Graduated college", "Post-graduate degree"),
+                                    less_college = c("Did not graduate high school",
+                                                     "Graduated high school",
+                                                     "Some college"))
+             ) %>%
+      mutate_all(as.ordered) 
+```
+
+## Overview/Agenda
+
+1. Key concepts and terms
+2. Model identification and estimation
+3. R and the lavaan package
+4. Overview of models:
+      - Path models
+      - Measurement/Latent variable models
+      - Combining measurement variable and path models
+      
+## Learning Objectives
+
+1. Describe key terms in structural equation modeling (SEM)
+2. Identify analytic goals and data that lend themselves to SEM
+3. Write out SEM model in equation and graphical form
+4. Interpret and assess models
+
+## Key concepts and terms
+- Structural Equation Modeling (SEM):
+      - General framework for fitting (often complex) statistical models
+      - Many familiar models are special cases of SEM
+      - Flexible in allowing constraints on parameter estimates
+- Common analyses:
+      - Relate $\geq1$ dependent to $\geq1$ independent variables
+      - Confirm a hypothesized causal mechanism
+      - Confirm a latent variable measurement model
+
+## Key concepts and terms
+- Measurement model: relates manifest variables to latent construct
+
+- Structural Model: relates constructs to other constructs
+
+- Mediation: Effect of an independent variable on a dependent variable operates through its effect on an intermediate variable
+
+- Moderation: Effect of an independent variable on a dependent variable is different at levels of a third variable
+
+## Graphical model presentation {.center}
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+library(semPlot); library(lavaan)
+
+cor_mat1 <- matrix(c(1.0, 0.4, 0.5, 0.5,
+                    0.4, 1.0, 0.6, 0.3,
+                    0.5, 0.6, 1.0 ,0.3,
+                    0.5, 0.3, 0.3, 1.0),
+                  4,4)
+
+colnames(cor_mat1) <- c("inheritance", "tx_impact", "discrimination", "risk_reduction")
+rownames(cor_mat1) <- c("inheritance", "tx_impact", "discrimination", "risk_reduction")
+
+m1 <- 'Genetic Testing Knowledge =~ inheritance + tx_impact + discrimination + risk_reduction
+       tx_impact ~~ risk_reduction'
+f1 <- cfa(m1, sample.cov=cor_mat1, sample.nobs = 551)
+
+semPaths(f1, what = "path", nCharNodes = 0, sizeMan=10, sizeLat=10, 
+         fixedStyle = c("black", 5), freeStyle = c("black", 5))
+```
+
+## Writing model in equation form
+- General Notation (measurement model):
+
+$$
+\begin{align}
+y_{i1} = v_{1} + \lambda_{1k}\eta_{i1} +&... + \lambda_{1m}\eta_{im} + e_{i1} \\
+&\vdots \\
+y_{ij} = v_{j} + \lambda_{j1}\eta_{i1} +&... + \lambda_{jm}\eta_{im} + e_{ij} \\
+\end{align}
+$$
+(notation varies by software and text books)
+
+## Writing model in equation form
+- Preceding model:
+
+$$
+\begin{align}
+inheritance = v_1 + \lambda_{1} genetic\_testing\_knowledge + e_{i1} \\
+
+tx\_impact = v_2 + \lambda_{2} genetic\_testing\_knowledge + e_{i2} \\
+
+discrimination = v_3 + \lambda_{3} genetic\_testing\_knowledge + e_{i3} \\
+
+risk\_reduction = v_4 + \lambda_{4} genetic\_testing\_knowledge + e_{i4}
+\end{align}
+$$
+
+## Writing model in equation form
+- In software, the model is often written:
+$$
+\begin{align}
+latent_1 \space \left< operator \right> \space man&ifest_{1,1} + ... + manifest_{j,1} \\
+&\vdots \\
+latent_m \space \left< operator \right> \space man&ifest_{j,m} + ... + manifest_{k,m} \\
+\end{align}
+$$
+- 'operator' indicates unique symbols for regress, variance/covariance, and latent measures
+
+- Genetic testing knowledge:
+
+$$
+\begin{align}
+Gx\_testing\_know \space \left< operator \right> \space inherit + tx\_impact + discrim + risk\_reduc
+\end{align}
+$$
+
+## Model identification
+- Latent variables do not have a natural unit of measurement
+- Constrain one parameter to identify the model
+      - Usually, the first path coefficient, $\lambda$, is constrained to 1
+      - Alternatively, constrain variance of latent variable to 1
+
+## Estimation 
+- Maximum likelihood:
+      - Assumes conditional multivariate normality (MVN) 
+      - Bootstrapping or adjustments to Chi2 value (Satorra-Bentler) and standard errors can adjust bias in standard errors and confidence intervals in presence of non-normality
+- Asymptotic Distribution Free/Weighted Least Squares:
+      - Uses a weighting matrix in the fitting function to adjust for non-normality
+      - Variations inlude means- or means and variance adjusted WLS to produce robust standard errors, and Diagnoally WLS to reduce computation
+
+## Assessing model fit
+- Chi2 goodness of fit:
+      - compares estimated model against a "saturated" model
+      - if model is not statistically different, it can be regarded as a good fitting model
+      - null hypothesis is equal fit of analytic and saturated models
+      - Strongly influenced by sample size
+
+- Tucker Lewis and Comparative Fit Indices:
+      - analogous to R-squared
+      - compares fit in observed model to "null" model
+      - ranges from 0 to 1
+      - descriptive; guides for good fit is >0.90 or >0.95
+
+## Assessing model fit
+- Standardized Root Mean Square Residual (SRMR) 
+      - standardized difference between observed and model implied correlations
+      - 0 indicates perfect fit, <0.08 usually considered good
+
+- Root Mean Square Error of Approximation (RMSEA)
+      - calculated based on non-centrality parameter
+      - 0 indicates perfect fit, <0.06, <0.08, and <0.10 common cut-off values
+      - can generate confidence intervals, or test RMSEA<0.08 (or other value)
+
+## Assessing model fit
+- Inspect residual covariance or correlation matrix: 
+$$
+\begin{align}
+\mathbf{R_{resid} = R_{observed} - R_{modelimplied}}
+\end{align}
+$$
+
+   - Large residual covariance among item pairs indicates lack of fit
+      
+- Inspect modification indices or LR-Chi2 test of nested models
+      - MI is estimated change in model-Chi2 by allowing parameter to be estimated
+      - LR-Chi2 gives significance test on path coefficients
+
+## R and the lavaan package
+- R is open source statistical programming software
+- A number of statistial functions included in base
+- Several user written packages for specialized analyses can be installed (or written)
+
+- 'lavaan' package:
+      - R package for fitting structural equation models
+      - developed by Yves Rosseel at Ghent University
+      
+## Path models:
+- Causal model without latent variables
+- Hypothesize effect of education on health care consumption is mediated by income
+
+```{r}
+cor_mat2 <- matrix(c(1.0, 0.4, 0.5,
+                    0.4, 1.0, 0.6, 
+                    0.5, 0.6, 1.0),
+                   3,3)
+
+colnames(cor_mat2) <- c("Education", "Income", "HC_consumption")
+rownames(cor_mat2) <- c("Education", "Income", "HC_consumption")
+```
+
+```{r}
+psych::lowerMat(cor_mat2)
+```
+
+## Path models: 
+
+- write out and fit the model
+
+```{r, warning=FALSE, message=FALSE}
+library(lavaan)
+model <- '# Direct effect
+            HC_consumption ~ c*Education
+          
+          # Mediation
+            Income ~ a*Education
+            HC_consumption ~ b*Income
+            
+          # Indirect effect
+            ab := a*b
+
+          # Total effect
+            total := c + (a*b)
+         '
+path_fit <- sem(model, sample.cov=cor_mat2, sample.nobs = 551, 
+                estimator="ML")
+```
+
+## Path models: {.smaller}
+```{r}
+summary(path_fit)
+```
+
+## Path Models
+```{r, message=FALSE, warning=FALSE}
+library(semPlot)
+
+semPaths(path_fit, "std", rotation = 2, nCharNodes = 0, layout = "spring", 
+         edge.label.cex=1.5, levels = c(1,2,3), sizeLat = 10, weighted = F,
+         sizeMan=10, fixedStyle = c("black", 5), freeStyle = c("black", 5))
+```
+
+## Measurement (latent variable) model
+
+- Hypothesize a unidimensional model, where knowledge of multi-panel gene testing determines responses to manifest items
+
+```{r, message=FALSE, warning=FALSE}
+library(lavaan)
+
+knowledge_mod <-  '
+                  GenTesting_knowledge =~ know1.factor + know2.factor + 
+                  know3.factor + know20.factor + know21.factor + 
+                  know22.factor + know23.factor + know24.factor
+                  '
+cfa_fit <- cfa(knowledge_mod, data = know_micra.df, estimator = "WLSMV")
+```
+
+## Measurement (latent variable) model {.smaller}
+```{r}
+summary(cfa_fit)
+```
+
+## Measurement (latent variable) model {.smaller}
+```{r, message=FALSE, warning=FALSE}
+standardizedsolution(cfa_fit)
+```
+
+## Measurement (latent variable) model
+```{r, message=FALSE, warning=FALSE}
+semPaths(cfa_fit, what = "path", whatLabels = "std", nCharNodes = 0, 
+         sizeLat = 12, sizeMan = 10, fixedStyle = c("black", 5), 
+         edge.label.cex = 0.8, thresholds = F, intercepts = F, 
+         freeStyle = c("black", 5), weighted = F)
+```
+
+
+## Measurement (latent variable) model 
+```{r, warning=FALSE}
+fit_ms <- fitMeasures(cfa_fit)
+round(fit_ms["cfi.scaled"], 3)
+round(fit_ms["rmsea.scaled"], 3)
+
+semTools::nullRMSEA(cfa_fit)
+```
+
+## Measurement (latent variable) model
+```{r}
+resid_r <- resid(cfa_fit)$cov
+psych::corPlot(resid_r, upper=F, numbers = T)
+```
+
+## Measurement Model {.smaller}
+```{r}
+mod_ind <- modificationindices(cfa_fit)
+head(mod_ind[order(mod_ind$mi, decreasing=TRUE), ], 5)
+```
+
+- MI ~ Chi2, df=1
+- At alpha = 0.05, critical value = 8.28, after adjusting for multiple comparisons
+
+- Remediation options: 
+      - free one residual covariances to be estimated, if interpretable
+      - eliminate one of the "offending"" variables and refit model 
+      - leave as is if (1) both variables are crucial for content validity 
+      - leave as is if eliminating item does not substantively alter interpretation
+
+## Combining Path and Measurement Model
+
+- Hypothesize college educated have greater knowledge, on average, than those without college degree
+
+```{r, warning=FALSE, message=FALSE}
+model <-    '
+            # Genetic knowledge measurement
+            GenTesting_knowledge =~ know1.factor + know2.factor + know3.factor +
+            know20.factor + know21.factor + know22.factor + know23.factor + 
+            know24.factor
+
+            # structural model
+            GenTesting_knowledge ~ college
+            '
+sem_fit <- sem(model, data = know_micra.df, estimator = "WLSMV")
+```
+
+## Combining Path and Measurement Model {.smaller}
+```{r}
+summary(sem_fit)
+```
+
+## Combining Path and Measurement Model
+```{r, warning=FALSE, message=FALSE}
+semPaths(sem_fit, what = "path", whatLabels = "std", nCharNodes = 0,
+         sizeMan = 7, sizeLat = 10, rotation = 2, 
+         edge.label.cex=1, thresholds = F, intercepts = F,
+         fixedStyle = c("black", 5), freeStyle = c("black", 5))
+```
+
+
+## Additional resources
+- R: 
+      - http://www.r-project.org
+      - http://www.RStudio.org
+      
+- Lavaan:
+      - http://lavaan.ugent.be/
+      - Yves Rosseel (2012). lavaan: An R Package for Structural Equation Modeling. Journal of Statistical Software, 48(2), 1-36. URL http://www.jstatsoft.org/v48/i02/
+      
+- Confirmatory Factor Analysis:
+
+      - Brown, T.A., 2014. Confirmatory factor analysis for applied research. Guilford Publications.
+
+- Structural Equation Modeling:
+      - Hox, J.J. and Bechger, T.M., 2007. An introduction to structural equation modeling.
+      - R packages: https://cran.r-project.org/web/views/Psychometrics.html
+      - Lisrel
+      - Mplus 
+      - EQS
+      - Stata
+      - SAS
+      - SPSS AMOS
+      - MPlus and Stata have instructive reference manuals for SEM
+      - http://lavaan.ugent.be/ has good examples
+
